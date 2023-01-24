@@ -14,6 +14,11 @@ main() {
         exit 1
     fi
 
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        # shellcheck disable=SC1091
+        source "$SCRIPT_DIR/.env"
+    fi
+
     if ! docker plugin ls | grep -q 'rclone' &>/dev/null; then
         echo "installing docker plugin rclone"
         local rclone_config="$SCRIPT_DIR/config/rclone"
@@ -26,6 +31,21 @@ main() {
             "config=$rclone_config" "cache=$rclone_cache"
     else
         echo "docker plugin rclone already installed"
+    fi
+
+    if ! docker volume ls | grep -q 'realdebrid' &>/dev/null; then
+        echo "installing docker volume realdebrid"
+
+        if [ -z "$RDEBRID_TOKEN" ]; then
+            echo "missing RDEBRID_TOKEN environment variable" >&2
+            exit 1
+        fi
+
+        docker volume create realdebrid -d rclone -o type=realdebrid \
+            -o "realdebrid-api_key=$RDEBRID_TOKEN" -o allow-other=true \
+            -o dir-cache-time=10s
+    else
+        echo "docker volume realdebrid already mounted"
     fi
 
 }
